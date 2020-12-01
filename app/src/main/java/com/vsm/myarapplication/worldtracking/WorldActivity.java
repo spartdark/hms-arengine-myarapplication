@@ -1,4 +1,4 @@
-package com.vsm.myarapplication;
+package com.vsm.myarapplication.worldtracking;
 
 import android.content.Intent;
 import android.opengl.GLSurfaceView;
@@ -18,41 +18,51 @@ import com.huawei.hiar.ARWorldTrackingConfig;
 import com.huawei.hiar.exceptions.ARCameraNotAvailableException;
 import com.huawei.hiar.exceptions.ARUnSupportedConfigurationException;
 import com.huawei.hiar.exceptions.ARUnavailableClientSdkTooOldException;
-import com.huawei.hiar.exceptions.ARUnavailableDeviceNotCompatibleException;
 import com.huawei.hiar.exceptions.ARUnavailableServiceApkTooOldException;
 import com.huawei.hiar.exceptions.ARUnavailableServiceNotInstalledException;
+import com.vsm.myarapplication.GestureEvent;
+import com.vsm.myarapplication.R;
 import com.vsm.myarapplication.common.ConnectAppMarketActivity;
 import com.vsm.myarapplication.common.DisplayRotationManager;
-import com.vsm.myarapplication.common.PermissionManager;
 import com.vsm.myarapplication.rendering.WorldRenderManager;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
-public class MainActivity extends AppCompatActivity {
+public class WorldActivity extends AppCompatActivity {
+    private static final String TAG = WorldActivity.class.getSimpleName();
 
-    private static final String TAG = MainActivity.class.getSimpleName();
     private static final int MOTIONEVENT_QUEUE_CAPACITY = 2;
+
     private static final int OPENGLES_VERSION = 2;
+
     private ARSession mArSession;
+
     private GLSurfaceView mSurfaceView;
+
     private WorldRenderManager mWorldRenderManager;
+
     private GestureDetector mGestureDetector;
+
     private DisplayRotationManager mDisplayRotationManager;
+
     private ArrayBlockingQueue<GestureEvent> mQueuedSingleTaps = new ArrayBlockingQueue<>(MOTIONEVENT_QUEUE_CAPACITY);
+
     private String message = null;
+
     private boolean isRemindInstall = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        // AR Engine requires the camera permission.
-        PermissionManager.checkPermission(this);
+        setContentView(R.layout.activity_world);
+
         mSurfaceView = findViewById(R.id.surfaceview);
         mDisplayRotationManager = new DisplayRotationManager(this);
         initGestureDetector();
+
         mSurfaceView.setPreserveEGLContextOnPause(true);
         mSurfaceView.setEGLContextClientVersion(OPENGLES_VERSION);
+
         // Set the EGL configuration chooser, including for the number of
         // bits of the color buffer and the number of depth bits.
         mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0);
@@ -68,19 +78,14 @@ public class MainActivity extends AppCompatActivity {
     private void initGestureDetector() {
         mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
-            public boolean onDoubleTap(MotionEvent motionEvent) {
-                onGestureEvent(GestureEvent.createDoubleTapEvent(motionEvent));
+            public boolean onSingleTapUp(MotionEvent e) {
+                onGestureEvent(GestureEvent.createSingleTapUpEvent(e));
                 return true;
             }
 
             @Override
-            public boolean onSingleTapConfirmed(MotionEvent motionEvent) {
-                onGestureEvent(GestureEvent.createSingleTapConfirmEvent(motionEvent));
-                return true;
-            }
-
-            @Override
-            public boolean onDown(MotionEvent motionEvent) {
+            public boolean onDown(MotionEvent e) {
+                onGestureEvent(GestureEvent.createDownEvent(e));
                 return true;
             }
 
@@ -90,7 +95,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
-
         mSurfaceView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -102,15 +106,15 @@ public class MainActivity extends AppCompatActivity {
     private void onGestureEvent(GestureEvent e) {
         boolean offerResult = mQueuedSingleTaps.offer(e);
         if (offerResult) {
-            Log.i(TAG, "Successfully joined the queue.");
+            Log.d(TAG, "Successfully joined the queue.");
         } else {
-            Log.i(TAG, "Failed to join queue.");
+            Log.d(TAG, "Failed to join queue.");
         }
     }
 
     @Override
     protected void onResume() {
-        Log.i(TAG, "onResume");
+        Log.d(TAG, "onResume");
         super.onResume();
         Exception exception = null;
         message = null;
@@ -120,15 +124,13 @@ public class MainActivity extends AppCompatActivity {
                     finish();
                     return;
                 }
-                mArSession = new ARSession(getApplicationContext());
+                mArSession = new ARSession(this);
                 ARWorldTrackingConfig config = new ARWorldTrackingConfig(mArSession);
                 config.setFocusMode(ARConfigBase.FocusMode.AUTO_FOCUS);
                 config.setSemanticMode(ARWorldTrackingConfig.SEMANTIC_PLANE);
                 mArSession.configure(config);
                 mWorldRenderManager.setArSession(mArSession);
             } catch (Exception capturedException) {
-                capturedException.printStackTrace();
-                Log.e(TAG, capturedException.toString());
                 exception = capturedException;
                 setMessageWhenError(capturedException);
             }
@@ -146,6 +148,49 @@ public class MainActivity extends AppCompatActivity {
         }
         mDisplayRotationManager.registerDisplayListener();
         mSurfaceView.onResume();
+    }
+
+    /**
+     * Check whether HUAWEI AR Engine server (com.huawei.arengine.service) is installed on
+     * the current device. If not, redirect the user to HUAWEI AppGallery for installation.
+     */
+    private boolean arEngineAbilityCheck() {
+        boolean isInstallArEngineApk = AREnginesApk.isAREngineApkReady(this);
+        if (!isInstallArEngineApk && isRemindInstall) {
+            Toast.makeText(this, "Please agree to install.", Toast.LENGTH_LONG).show();
+            finish();
+        }
+        Log.d(TAG, "Is Install AR Engine Apk: " + isInstallArEngineApk);
+        if (!isInstallArEngineApk) {
+            startActivity(new Intent(this, ConnectAppMarketActivity.class));
+            isRemindInstall = true;
+        }
+        return AREnginesApk.isAREngineApkReady(this);
+    }
+
+    private void setMessageWhenError(Exception catchException) {
+        if (catchException instanceof ARUnavailableServiceNotInstalledException) {
+            startActivity(new Intent(this, ConnectAppMarketActivity.class));
+        } else if (catchException instanceof ARUnavailableServiceApkTooOldException) {
+            message = "Please update HuaweiARService.apk";
+        } else if (catchException instanceof ARUnavailableClientSdkTooOldException) {
+            message = "Please update this app";
+        } else if (catchException instanceof ARUnSupportedConfigurationException) {
+            message = "The configuration is not supported by the device!";
+        } else {
+            message = "exception throw";
+        }
+    }
+
+    private void stopArSession(Exception exception) {
+        Log.i(TAG, "stopArSession start.");
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        Log.e(TAG, "Creating session error", exception);
+        if (mArSession != null) {
+            mArSession.stop();
+            mArSession = null;
+        }
+        Log.i(TAG, "stopArSession end.");
     }
 
     @Override
@@ -171,46 +216,15 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "onDestroy end.");
     }
 
-    private boolean arEngineAbilityCheck() {
-        boolean isInstallArEngineApk = AREnginesApk.isAREngineApkReady(this);
-        if (!isInstallArEngineApk && isRemindInstall) {
-            Toast.makeText(this, "Please agree to install.", Toast.LENGTH_LONG).show();
-            finish();
-        }
-        Log.d(TAG, "Is Install AR Engine Apk: " + isInstallArEngineApk);
-        if (!isInstallArEngineApk) {
-            startActivity(new Intent(this, ConnectAppMarketActivity.class));
-            isRemindInstall = true;
-        }
-        return AREnginesApk.isAREngineApkReady(this);
-    }
-
-    private void setMessageWhenError(Exception catchException) {
-        if (catchException instanceof ARUnavailableServiceNotInstalledException) {
-            startActivity(new Intent(getApplicationContext(), ConnectAppMarketActivity.class));
-        } else if (catchException instanceof ARUnavailableServiceApkTooOldException) {
-            message = "Please update HuaweiARService.apk";
-        } else if (catchException instanceof ARUnavailableClientSdkTooOldException) {
-            message = "Please update this app";
-        } else if (catchException instanceof ARUnSupportedConfigurationException) {
-            message = "The configuration is not supported by the device!";
-        } else if (catchException instanceof ARUnavailableDeviceNotCompatibleException) {
-            message = "Device is not supported!";
-        } else {
-            message = "exception throw";
+    @Override
+    public void onWindowFocusChanged(boolean isHasFocus) {
+        Log.d(TAG, "onWindowFocusChanged");
+        super.onWindowFocusChanged(isHasFocus);
+        if (isHasFocus) {
+            getWindow().getDecorView()
+                    .setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
-
-    private void stopArSession(Exception exception) {
-        Log.i(TAG, "stopArSession start.");
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-        Log.e(TAG, "Creating session error", exception);
-        if (mArSession != null) {
-            mArSession.stop();
-            mArSession = null;
-        }
-        Log.i(TAG, "stopArSession end.");
-    }
-
-
 }
