@@ -9,12 +9,14 @@ import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.vsm.myarapplication.hand.HandActivity;
+import com.vsm.myarapplication.healt.HealtActivity;
 
 public class MainManuActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = MainManuActivity.class.getSimpleName();
     private Button buttonArWorld;
     private Button buttonSurfaceDetection;
     private boolean isFirstClick = true;
+    private Button buttonhealt;
 
 
     @Override
@@ -24,6 +26,8 @@ public class MainManuActivity extends AppCompatActivity implements View.OnClickL
         buttonSurfaceDetection = findViewById(R.id.buttonSurfaceDetection);
         buttonSurfaceDetection.setOnClickListener(this);
         buttonArWorld = findViewById(R.id.buttonArWorld);
+        buttonhealt = findViewById(R.id.buttonhealt);
+        buttonhealt.setOnClickListener(this);
         buttonArWorld.setOnClickListener(this);
     }
 
@@ -36,6 +40,9 @@ public class MainManuActivity extends AppCompatActivity implements View.OnClickL
             case R.id.buttonArWorld:
                 Intent intent = new Intent(this, HandActivity.class);
                 startActivity(intent);
+                break;
+            case R.id.buttonhealt:
+                startActivity(new Intent(MainManuActivity.this, HealtActivity.class));
                 break;
             default:
                 Log.e(TAG, "onClick error!");

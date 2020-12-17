@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android" android:width="800dp" android:height="3120dp" android:viewportWidth="800" android:viewportHeight="3120">
+    <path android:fillAlpha="0.6" android:fillColor="#000000" android:fillType="evenOdd" android:pathData="M0,0l800,0l0,3120l-800,0z" android:strokeWidth="1" android:strokeAlpha="0.6" android:strokeColor="#00000000" />
+
+</selector>
