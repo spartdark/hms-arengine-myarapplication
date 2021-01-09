@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.vsm.myarapplication.rendering;
+package com.vsm.myarapplication.worldtracking.rendering;
 
 import android.graphics.Bitmap;
 import android.opengl.GLES20;

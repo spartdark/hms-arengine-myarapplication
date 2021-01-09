@@ -24,7 +24,7 @@ import com.huawei.hiar.exceptions.ARUnavailableServiceNotInstalledException;
 import com.vsm.myarapplication.common.ConnectAppMarketActivity;
 import com.vsm.myarapplication.common.DisplayRotationManager;
 import com.vsm.myarapplication.common.PermissionManager;
-import com.vsm.myarapplication.rendering.WorldRenderManager;
+import com.vsm.myarapplication.worldtracking.rendering.WorldRenderManager;
 
 import java.util.concurrent.ArrayBlockingQueue;
 

@@ -1,4 +1,4 @@
-package com.vsm.myarapplication.rendering;
+package com.vsm.myarapplication.worldtracking.rendering;
 
 import android.app.Activity;
 import android.content.Context;
